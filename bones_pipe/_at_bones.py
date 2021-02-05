@@ -1,35 +1,34 @@
+# *******************************************************************************
+#
+#    Copyright (c) 2018-2021 David Briant. All rights reserved.
+#
+# *******************************************************************************
+
 import inspect, types
 import contextlib
 
 from coppertop import Missing
 
-from bones._core import ProgrammerError, TV, D_TV
-from bones.types import BType, tNullary, tUnary, tBinary, tRmu, tAdverb, BTypeEquals, D_BType
+from bones_data import BType, tNullary, tUnary, tBinary, tRmu, tAdverb, SV
+
+class ProgrammerError(Exception):pass
 
 
 _I_FRAME = 0
 _I_FILENAME = 1
 _I_FUNCTION = 3
 
-_idSeed = 0
-
 _globalScope = {}
 
 
 
-
 def _typeOfArg(x):
-    if isinstance(x, D_TV):
-        return x.getT()
+    if isinstance(x, SV):
+        return x.s
     else:
         return type(x)
 
 
-def bhash(t):
-    if isinstance(t, D_BType):
-        return t.id
-    else:
-        return t
 
 
 class PolyFn(object):
@@ -43,20 +42,22 @@ class PolyFn(object):
 
     def _doCall(self, args):
         sig = tuple(args[:self.numTypeArgs]+tuple(_typeOfArg(arg) for arg in args[self.numTypeArgs:]))
-        sig = tuple(bhash(e) for e in sig)
-        try:
-            details = self.detailsBySig.get(sig, Missing)
-        except:
-            a = 1
+        details = _selectTarget(sig, self.detailsBySig)
         if details is Missing:
-            raise TypeError("No fn matches sig")
+            raise TypeError(f"{self.fullModuleName} - no matches for {repr(sig)}")
         ret, function, unwrap = details
         if unwrap:
             v = function(*tuple(_unwrap(t, arg) for t, arg in zip(sig, args)))
-            return _wrap(ret, v)
+            answer = _wrap(ret, v)
         else:
-            v = function(*args)
-            return v
+            answer = function(*args)
+        if isinstance(ret, BType):
+            if not isinstance(_typeOfArg(answer), BType) or answer.s not in ret:
+                raise TypeError(f"Trying to return a {_typeOfArg(answer)} from {self.fullModuleName} which specifies {ret}")
+        else:
+            if not isinstance(answer, ret):
+                raise TypeError(f"Trying to return a {_typeOfArg(answer)} from {self.fullModuleName} which specifies {ret}")
+        return answer
 
     def __call__(self, *args):
         if self.numTypeArgs > 0:
@@ -83,15 +84,15 @@ class PolyFn(object):
         # other >> self
         if self.numTypeArgs > 0:
             raise TypeError("Type args have not been specified")
-        if BTypeEquals(self.flavour, tNullary):
+        if self.flavour == tNullary:
             raise TypeError("can't pipe arguments into a nullary fn")
-        elif BTypeEquals(self.flavour, tUnary):
+        elif self.flavour == tUnary:
             return self._doCall((other,))
-        elif BTypeEquals(self.flavour, tBinary):
+        elif self.flavour == tBinary:
             raise NotImplementedError()
-        elif BTypeEquals(self.flavour, tRmu):
+        elif self.flavour == tRmu:
             raise NotImplementedError()
-        elif BTypeEquals(self.flavour, tAdverb):
+        elif self.flavour == tAdverb:
             raise NotImplementedError()
         else:
             raise ProgrammerError()
@@ -102,8 +103,21 @@ class PolyFn(object):
         self.detailsBySig[sig] = ret, function, unwrap
         #print(f"{sig}, {tuple(t.id for t in sig)}  ---> {function.__name__}")
 
-# MUSTDO add registerRule so can do *(ccy(T1), fx(T1,T2))->ccy(T2) and +(ccy(T1),ccy(T1))->ccy(T1)
-# MUSTDO add registrations so can see all the potential bindings for a name
+
+def _selectTarget(sig, detailsBySig):
+    details = detailsBySig.get(sig, Missing)     # try matching on exact type first
+    if details is Missing:                          # find first matching signature - we should check statically that there are no overlapping signatures
+        numArgs = len(sig)
+        for overload, deets in detailsBySig.items():
+            if len(overload) != numArgs: continue
+            found = True
+            for st, ot in zip(sig, overload):
+                if st not in ot:
+                    found = False
+                    break
+            if found:
+                details = deets
+    return details
 
 
 class _Partial(object):
@@ -119,7 +133,7 @@ class _Partial(object):
 
     def __rrshift__(self, arg):
         # other >> self
-        if BTypeEquals(self.flavour, tUnary):
+        if self.flavour == tUnary:
             if self.args is Missing:
                 # just the one arg in total
                 return self.polyFn._doCall(self.typeArgs+(arg,))
@@ -127,11 +141,11 @@ class _Partial(object):
                 iMissing = self.iMissings[0]
                 return self.polyFn._doCall(self.typeArgs+self.args[:iMissing]+(arg,)+self.args[iMissing+1:])
             raise TypeError("Must provide all missing args not just pipe one arg in")
-        elif BTypeEquals(self.flavour, tBinary):
+        elif self.flavour == tBinary:
             raise NotImplementedError()
-        elif BTypeEquals(self.flavour, tRmu):
+        elif self.flavour == tRmu:
             raise NotImplementedError()
-        elif BTypeEquals(self.flavour, tAdverb):
+        elif self.flavour == tAdverb:
             raise NotImplementedError()
         else:
             raise ProgrammerError()
@@ -153,13 +167,13 @@ class _Partial(object):
 def _iMissings(args):
     iMissings = []
     for i, e in enumerate(args):
-        if not isinstance(e, D_TV) and e == ...:
+        if not isinstance(e, SV) and e == ...:
             iMissings += [i]
     return iMissings
 
 
 
-def bones(*args, scope=Missing, name=Missing, sig=Missing, ret=Missing, flavour=tUnary, unwrap=True, numTypeArgs=0):
+def bones(*args, scope=Missing, name=Missing, sig=Missing, ret=Missing, flavour=tUnary, unwrap=False, numTypeArgs=0):
     # scope - defaults to the getPybonesScope()
     # name - defaults to the python function name
     # sig - tuple of type for each arg
@@ -190,7 +204,7 @@ def bones(*args, scope=Missing, name=Missing, sig=Missing, ret=Missing, flavour=
                     raise TypeError('Function must not include %s=%s' % (pName, parameter.default))
         _sig = (sig,) if isinstance(sig, BType) else sig  # handle the case when there's just the one arg
         _sig = tuple(argTypes) if _sig is Missing else _sig
-        _sig = tuple(bhash(e) for e in _sig)
+        # _sig = tuple(bhash(e) for e in _sig)
         for argType, argName in zip(_sig, argNames):
             if argType is inspect._empty:
                 raise TypeError(f"No type for '{argName}' for function '{fn.__name__}'")
@@ -250,12 +264,15 @@ def bones(*args, scope=Missing, name=Missing, sig=Missing, ret=Missing, flavour=
 
 def _unwrap(t, x):
     # ignore specified type for the moment
-    if isinstance(x, TV):
+    if isinstance(x, SV):
         return x.v
     else:
         return x
 
 def _wrap(t, v):
     # ignore specified type for the moment
-    return TV(t, v)
+    if isinstance(v, SV):
+        return v
+    else:
+        return SV(t, v)
 
