@@ -1,19 +1,5 @@
 ## Wishlist
 
-BStructType('entityCore', 'tEntityCore', dict(id=tID, x=tNum, y=tNum))\
-BStructType('ship', 'tShip', dict(entity=tEntity, lives=tU8))\
-BSumType('collidable', 'tCollideable', [tEntityCore, tShip])\
-BSimpleTaggedType(tEntityCore, "tAsteroid", "tAsteroid")\
-BSimpleTaggedType(tEvent, "collision", "tCollision")
-
-
-what about tPyStr**(tEvent+tNull) for discrete maps?\
-(tPyStr*tPyStr) ^ tInt   for functions (without named arguments)\
-tagging must use call syntax as [] can't handle names or we could provide a dict thus:\
-* (tPyStr**(tEvent+tNull))[tHashMap]
-* (tPyStr**(tEvent+tNull))[tHashMap,tFred]
-* tNum[dict(dom=tUSD, for=tGBP)]
-    
 
 
 
@@ -22,6 +8,9 @@ tagging must use call syntax as [] can't handle names or we could provide a dict
 ## Next stage [MoSCoW]
 
 #### MustDo / TODO
+* dispatch should throw Dynamic/ partial TypeError e.g. int+null has been bound to (int) -> ... but at run time the Val is null
+* @bones can throw an overload TypeError - i.e. enforce signatures to not overlap
+* test_inplace
 
 
 #### ShouldDo
@@ -33,7 +22,7 @@ tagging must use call syntax as [] can't handle names or we could provide a dict
 
 
 #### WontDo
-
+* 
 * allow collide to return an imlist / array / tensor of events, i.e. add BArrayType so can do N**(tEvent+tNull). For example this
 could a allow lives to be decremented and if run out can return
 ```
