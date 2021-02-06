@@ -8,6 +8,7 @@
 ## Next stage [MoSCoW]
 
 #### MustDo / TODO
+* handle signatures with python types, e.g. so [] >> to(matrix[unbound]) can call def to(t: list, v: list) -> matrix[unbound]
 * dispatch should throw Dynamic/ partial TypeError e.g. int+null has been bound to (int) -> ... but at run time the Val is null
 * @bones can throw an overload TypeError - i.e. enforce signatures to not overlap
 * test_inplace

@@ -15,6 +15,7 @@ from .to_for_tests import to
 
 unbound = BType('unbound')
 bound = BType('bound')
+null = BType('null')
 
 lhs = BType('lhs')
 lhsStar = BType('lhsStar')
@@ -126,11 +127,12 @@ def _vnew(n:count) -> vector[unbound]:
     return answer
 
 @bones
-def indexes(i1orN:count, i2:count=Missing) -> N**index:
-    if i2 is Missing:
-        return range(1, i1orN+1)
-    else:
-        return range(i1orN, i2+1)
+def indexes(i1orN:count) -> N**index:
+    return range(1, i1orN+1)
+
+@bones
+def indexes(i1orN: count, i2: count) -> N ** index:
+    return range(i1orN, i2 + 1)
 
 
 @bones
@@ -186,15 +188,15 @@ def mmulTrashB(A:matrix, B:matrix[inout], buf:vector[inout]) -> matrix[inout]:
     return B
 
 @bones
-def mmul_AL_AL__AN(A:matrix(bound), B:matrix(bound)) -> matrix[unbound]:
-    return mmulNew(A, B)
+def mmul_AL_AL__AN(A:matrix[bound], B:matrix[bound]) -> matrix[unbound]:
+    return mmul(A, B)
 
 @bones
-def mmul_LHS_ANON(A : lhs, B : unbound, S : unbound):
+def mmul_LHS_ANON(A : lhs, B : unbound, S : unbound) -> null:
     pass
 
 @bones
-def mmulIP(A : lhs, B : bound, S : unbound):
+def mmulIP(A : lhs, B : bound, S : unbound) -> null:
     pass
 
 @bones

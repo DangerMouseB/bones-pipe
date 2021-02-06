@@ -113,6 +113,8 @@ def _selectTarget(sig, detailsBySig):
             if len(overload) != numArgs: continue
             found = True
             for st, ot in zip(sig, overload):
+                if not isinstance(ot, BType):
+                    print(ot)
                 if st not in ot:
                     found = False
                     break
