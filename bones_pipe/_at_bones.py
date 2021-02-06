@@ -9,7 +9,8 @@ import contextlib
 
 from coppertop import Missing
 
-from bones_data import BType, tNullary, tUnary, tBinary, tRmu, tAdverb, SV
+from bones_data import BType, SV
+from bones_data.predefined import tNullary, tUnary, tBinary, tRmu, tAdverb
 
 class ProgrammerError(Exception):pass
 

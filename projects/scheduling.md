@@ -22,7 +22,6 @@
 
 
 #### WontDo
-* 
 * allow collide to return an imlist / array / tensor of events, i.e. add BArrayType so can do N**(tEvent+tNull). For example this
 could a allow lives to be decremented and if run out can return
 ```

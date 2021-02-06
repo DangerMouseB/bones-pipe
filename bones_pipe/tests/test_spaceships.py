@@ -4,18 +4,19 @@
 #
 # *******************************************************************************
 
-from bones_pipe import bones
-from bones_pipe.tests.to_for_tests import to
-from bones_data import SV, BType, tNull, tUTF8, tNullary, tN, tPyStr, tNum
+from .._at_bones import bones
+from .to_for_tests import to
+from bones_data import SV, BType
+from bones_data.predefined import tNull, tUTF8, tNullary, tN, tPyStr, tNum
 
 from coppertop import cout, AssertEqual
 
 
-tEntity = BType("entity", "tEntity")
-tAsteroid = BType("asteroid", "tAsteroid")
-tShip = BType("ship", "tShip")
-tCollision = BType("collision", "tCollision")
-tEvent = BType("event", "tEvent")
+tEntity = BType("entity")
+tAsteroid = BType("asteroid")
+tShip = BType("ship")
+tCollision = BType("collision")
+tEvent = BType("event")
 
 
 @bones(numTypeArgs=1)
@@ -100,8 +101,8 @@ def testFred1And2():
 
 
 
-tLinear = BType("linear", "tLinear")
-tNormal = BType("normal", "tNormal")
+tLinear = BType("linear")
+tNormal = BType("normal")
 
 @bones(numTypeArgs=1, flavour=tNullary)
 def rand(dist: tLinear) -> tNum:
