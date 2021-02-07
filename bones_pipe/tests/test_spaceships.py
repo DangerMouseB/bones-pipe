@@ -19,38 +19,38 @@ tCollision = BType("collision")
 tEvent = BType("event")
 
 
-@bones(numTypeArgs=1)
+@bones(numTypeArgs=1, unbox=True)
 def to(t: tShip, v: str) -> tShip:
-    return SV(t, v)
+    return v
 
-@bones(numTypeArgs=1)
+@bones(numTypeArgs=1, unbox=True)
 def to(t: tAsteroid, v: str) -> tAsteroid:
-    return SV(t, v)
+    return v
 
-@bones(numTypeArgs=1)
+@bones(numTypeArgs=1, unbox=True)
 def to(t: tEvent, v: str) -> tEvent:
-    return SV(t, v)
+    return v
 
-@bones(numTypeArgs=1)
+@bones(numTypeArgs=1, unbox=True)
 def to(t: tUTF8, v: str) -> tUTF8:
-    return SV(t, v)
+    return v
 
 @bones(numTypeArgs=1)
 def to(t: tUTF8, v: tEvent) -> tUTF8:
-    return SV(t, v.v)
+    return SV(t, v._v)
 
 
 @bones
 def collide(a: tAsteroid, b: tAsteroid) -> tEvent+tNull:
-    return f'{a.v} split {b.v} (collide<:asteroid,asteroid:>)' >> to(tEvent)
+    return f'{a._v} split {b._v} (collide<:asteroid,asteroid:>)' >> to(tEvent)
 
 @bones
 def collide(a: tShip, b: tAsteroid) -> tEvent+tNull:
-    return f'{a.v} tried to ram {b.v} (collide<:ship,asteroid:>)' >> to(tEvent)
+    return f'{a._v} tried to ram {b._v} (collide<:ship,asteroid:>)' >> to(tEvent)
 
 @bones
 def collide(a: tAsteroid, b: tShip) -> tEvent+tNull:
-    return f'{a.v} destroyed {b.v} (collide<:asteroid,ship:>)' >> to(tEvent)
+    return f'{a._v} destroyed {b._v} (collide<:asteroid,ship:>)' >> to(tEvent)
 
 @bones
 def collide(a: tShip, b: tShip) -> tEvent+tNull:
@@ -60,7 +60,7 @@ def collide(a: tShip, b: tShip) -> tEvent+tNull:
 
 @bones
 def process(e: tEvent+tNull) -> tUTF8:
-    return 'nothing' >> to(tUTF8) if e.s == tNull else (e >> to(tUTF8))
+    return 'nothing' >> to(tUTF8) if e._s == tNull else (e >> to(tUTF8))
 
 
 
@@ -74,17 +74,17 @@ def testCollide():
     ast1 = 'big asteroid' >> to(tAsteroid)
     ast2 = 'small asteroid' >> to(tAsteroid)
 
-    cout << (ship1 >> collide(..., ship2) >> process).v << '\n'
-    cout << (ship1 >> collide(..., ast1) >> process).v << '\n'
-    cout << (ship2 >> collide(ast2, ...) >> process).v << '\n'
-    cout << (ast1 >> collide(..., ast2) >> process).v << '\n'
+    cout << (ship1 >> collide(..., ship2) >> process)._v << '\n'
+    cout << (ship1 >> collide(..., ast1) >> process)._v << '\n'
+    cout << (ship2 >> collide(ast2, ...) >> process)._v << '\n'
+    cout << (ast1 >> collide(..., ast2) >> process)._v << '\n'
 
 
 
 def test_SV():
     x = SV(tPyStr, "hello")
-    tPyStr >> AssertEqual >> x.s
-    x.v >> AssertEqual >> "hello"
+    tPyStr >> AssertEqual >> x._s
+    x._v >> AssertEqual >> "hello"
 
 
 

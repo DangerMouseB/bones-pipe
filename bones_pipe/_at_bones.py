@@ -9,7 +9,7 @@ import contextlib
 
 from coppertop import Missing
 
-from bones_data import BType, SV
+from bones_data import BType, SV, BCount, BIndex, BOffset, BNum, SVTypes
 from bones_data.predefined import tNullary, tUnary, tBinary, tRmu, tAdverb
 
 class ProgrammerError(Exception):pass
@@ -24,8 +24,8 @@ _globalScope = {}
 
 
 def _typeOfArg(x):
-    if isinstance(x, SV):
-        return x.s
+    if isinstance(x, SVTypes):
+        return x._s
     else:
         return type(x)
 
@@ -46,14 +46,14 @@ class PolyFn(object):
         details = _selectTarget(sig, self.detailsBySig)
         if details is Missing:
             raise TypeError(f"{self.fullModuleName} - no matches for {repr(sig)}")
-        ret, function, unwrap = details
-        if unwrap:
-            v = function(*tuple(_unwrap(t, arg) for t, arg in zip(sig, args)))
-            answer = _wrap(ret, v)
+        ret, function, unbox = details
+        if unbox:
+            v = function(*tuple(_unbox(t, arg) for t, arg in zip(sig, args)))
+            answer = _box(ret, v)
         else:
             answer = function(*args)
         if isinstance(ret, BType):
-            if not isinstance(_typeOfArg(answer), BType) or answer.s not in ret:
+            if not isinstance(_typeOfArg(answer), BType) or answer._s not in ret:
                 raise TypeError(f"Trying to return a {_typeOfArg(answer)} from {self.fullModuleName} which specifies {ret}")
         else:
             if not isinstance(answer, ret):
@@ -98,10 +98,10 @@ class PolyFn(object):
         else:
             raise ProgrammerError()
 
-    def register(self, sig, ret, function, unwrap):
+    def register(self, sig, ret, function, unbox):
         if sig in self.detailsBySig:
             raise TypeError("duplicate registration")
-        self.detailsBySig[sig] = ret, function, unwrap
+        self.detailsBySig[sig] = ret, function, unbox
         #print(f"{sig}, {tuple(t.id for t in sig)}  ---> {function.__name__}")
 
 
@@ -113,11 +113,15 @@ def _selectTarget(sig, detailsBySig):
             if len(overload) != numArgs: continue
             found = True
             for st, ot in zip(sig, overload):
-                if not isinstance(ot, BType):
-                    print(ot)
-                if st not in ot:
-                    found = False
-                    break
+                if isinstance(ot, BType):
+                    if st not in ot:
+                        found = False
+                        break
+                else:
+                    # here we implement that a single python type is a list of one type
+                    if st == ot:
+                        found = False
+                        break
             if found:
                 details = deets
     return details
@@ -176,7 +180,7 @@ def _iMissings(args):
 
 
 
-def bones(*args, scope=Missing, name=Missing, sig=Missing, ret=Missing, flavour=tUnary, unwrap=False, numTypeArgs=0):
+def bones(*args, scope=Missing, name=Missing, sig=Missing, ret=Missing, flavour=tUnary, unbox=False, numTypeArgs=0):
     # scope - defaults to the getPybonesScope()
     # name - defaults to the python function name
     # sig - tuple of type for each arg
@@ -245,9 +249,9 @@ def bones(*args, scope=Missing, name=Missing, sig=Missing, ret=Missing, flavour=
             otherFullModuleName = objWithMyName[0][1].fullModuleName
             if myFullModuleName != otherFullModuleName:
                 importedPolyFn = objWithMyName[0][1]
-                for otherSig, (otherRet, otherFunction, otherUnwrap) in importedPolyFn.detailsBySig.items():
-                    polyFn.register(otherSig, otherRet, otherFunction, otherUnwrap)
-        polyFn.register(_sig, _ret, fn, unwrap)
+                for otherSig, (otherRet, otherFunction, otherUnbox) in importedPolyFn.detailsBySig.items():
+                    polyFn.register(otherSig, otherRet, otherFunction, otherUnbox)
+        polyFn.register(_sig, _ret, fn, unbox)
         return polyFn
 
     if len(args) == 1 and isinstance(args[0], (types.FunctionType, types.MethodType, type)):
@@ -265,17 +269,20 @@ def bones(*args, scope=Missing, name=Missing, sig=Missing, ret=Missing, flavour=
 
 
 
-def _unwrap(t, x):
+def _unbox(t, x):
     # ignore specified type for the moment
     if isinstance(x, SV):
-        return x.v
+        return x._v
     else:
         return x
 
-def _wrap(t, v):
+def _box(t, v):
     # ignore specified type for the moment
     if isinstance(v, SV):
-        return v
+        raise ProgrammerError("v is already boxed as "+v._s)
     else:
-        return SV(t, v)
+        if isinstance(t, BType):
+            return SV(t, v)
+        else:
+            return v
 

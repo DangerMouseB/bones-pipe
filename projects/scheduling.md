@@ -8,7 +8,6 @@
 ## Next stage [MoSCoW]
 
 #### MustDo / TODO
-* handle signatures with python types, e.g. so [] >> to(matrix[unbound]) can call def to(t: list, v: list) -> matrix[unbound]
 * dispatch should throw Dynamic/ partial TypeError e.g. int+null has been bound to (int) -> ... but at run time the Val is null
 * @bones can throw an overload TypeError - i.e. enforce signatures to not overlap
 * test_inplace
@@ -42,6 +41,7 @@ could a allow lives to be decremented and if run out can return
 ## Completed
 
 #### to Sun 2021.02.07
+* handle signatures with python types, e.g. so [] >> to(matrix[unbound]) can call def to(t: list, v: list) -> matrix[unbound]
 * check return type of actual value matches function signature
 * dispatch by matching for compatible signatures if hash doesn't match so collide and return a null event,  e.g. SV(tNull, None)
 * basic spaceships (can't return array of events and can't handle null events)

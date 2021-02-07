@@ -8,7 +8,7 @@ from .._at_bones import bones
 from bones_data import SV
 from bones_data.predefined import tPyStr
 
-@bones(numTypeArgs=1, unwrap=False)
+@bones(numTypeArgs=1, unbox=True)
 def to(t: tPyStr, v: str) -> tPyStr:
-    return SV(tPyStr, v)
+    return v
 
