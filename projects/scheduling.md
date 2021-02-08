@@ -1,6 +1,6 @@
 ## Wishlist
 
-
+* register into a specified scope
 
 
 <br>
@@ -9,8 +9,8 @@
 
 #### MustDo / TODO
 * dispatch should throw Dynamic/ partial TypeError e.g. int+null has been bound to (int) -> ... but at run time the Val is null
-* @bones can throw an overload TypeError - i.e. enforce signatures to not overlap
-
+* @bones throws an NonUniqueSignatureError subclass of TypeError - i.e. enforce signatures to not overlap
+* add registerRule so can do *(ccy(T1), fx(T1,T2))->ccy(T2) and +(ccy(T1),ccy(T1))->ccy(T1)
 
 #### ShouldDo
 
@@ -31,7 +31,6 @@ could a allow lives to be decremented and if run out can return
 ]
 ```
 
-* add registerRule so can do *(ccy(T1), fx(T1,T2))->ccy(T2) and +(ccy(T1),ccy(T1))->ccy(T1)
 * add registrations so can see all the potential bindings for a name
 
 

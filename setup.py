@@ -13,7 +13,7 @@ setup(
     'bones_pipe',
     'bones_pipe.tests',
   ],
-  version = 'v0.1.1',
+  version = 'v0.2',
   license='BSD',
   description = 'Piping with multi-dispatch for Python',
   long_description_content_type='text/markdown',
