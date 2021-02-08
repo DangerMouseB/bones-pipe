@@ -32,28 +32,48 @@ N = BType('N')
 def to(t: count, v: int) -> count:
     return BCount(v)
 
+@bones(numTypeArgs=1, unbox=True)
+def to(t: matrix[inout], v: matrix) -> matrix[inout]:
+    return v
 
-@bones
-def _mnew(r:count, c:count) -> matrix[unbound]:
+@bones(numTypeArgs=1, unbox=True)
+def to(t: vector[inout], v: vector) -> vector[inout]:
+    return v
+
+@bones(numTypeArgs=1)
+def to(t:matrix, x:BSum(list, tuple)) -> matrix:
+    r = len(x) >> to(count)
+    c = len(x[0]) >> to(count)
+    answer = new(matrix)(r, c)
+    for i in idxRange(r):
+        for j in idxRange(c):
+            atIJPut(answer, i, j, BNum(x[i-1][j-1]))
+    return answer
+
+@bones(numTypeArgs=1)
+def to(t:vector, x:BSum(list,tuple)) -> vector:
+    n = len(x)
+    answer = new(vector)(n)
+    for i in idxRange(n):
+        atIPut(answer, i, BNum(x[i-1]))
+    return answer
+
+@bones(numTypeArgs=1, unbox=True)
+def new(t: vector, n:count) -> vector:
+    next(_vnewCount)
+    answer = Vector([None] * n)
+    answer.n = n >> to(count)
+    return answer
+
+@bones(numTypeArgs=1)
+def new(t:matrix, r:count, c:count) -> matrix:
     next(_mnewCount)
     answer = Matrix([None] * c._v)
     for i in range(r._v):
         answer[i] = [None] * r._v
     answer.r = r
     answer.c = c
-    return SV(matrix[unbound], answer)
-
-
-@bones(numTypeArgs=1)
-def to(t:matrix[unbound], x:BSum(list, tuple)) -> matrix[unbound]:
-    r = len(x) >> to(count)
-    c = len(x[0]) >> to(count)
-    answer = _mnew(r, c)
-    for i in idxRange(r):
-        for j in idxRange(c):
-            atIJPut(answer, i, j, BNum(x[i-1][j-1]))
-    return answer
-
+    return SV(matrix, answer)
 
 class Matrix(list):
     def __init__(self, *args, **kwargs):
@@ -78,50 +98,35 @@ class Vector(list):
 
 
 # fortran ordered
-@bones(unbox=True)
-def atIJ(M:matrix[inout]+matrix[unbound], i:index+int, j:index+int) -> num:
+@bones
+def atIJ(M:matrix[inout]+matrix, i:index+int, j:index+int) -> num:
     next(_atIJCount)
-    return M[j-1][i-1]
+    return M._v[j-1][i-1] >> to(num)
 
 @bones(unbox=True)
-def atIJPut(M:matrix[inout]+matrix[unbound], i:index+int, j:index+int, x:num) -> matrix[unbound]:
+def atIJPut(M:matrix[inout]+matrix, i:index+int, j:index+int, x:num) -> matrix:
     next(_atIJPutCount)
     M[j-1][i-1] = x
     return M
 
-@bones(unbox=True)
-def atI(V:vector[inout]+vector[unbound], i:index+int) -> num:
+@bones
+def atI(V:vector[inout]+vector, i:index+int) -> num:
     next(_atICount)
-    return V[i-1]
+    return V._v[i-1] >> to(num)
 
 @bones(unbox=True)
-def atIPut(V:vector[inout]+vector[unbound], i:index+int, x:num) -> vector[unbound]:
+def atIPut(V:vector[inout]+vector, i:index+int, x:num) -> vector:
     next(_atIPutCount)
     V[i-1] = x
     return V
 
-
-# def atPutAnon(M:matrix[unbound], i:index, j:index, x:num) -> matrix[unbound]:
-#     return atPut(M, i, j, x)
-#
-# def atPutLhs(M:matrix(lhs), i:index, j:index, x:num) -> matrix[lhsStar]:
-#     return atPut(M, i, j, x)
-
 @bones
-def V(M:matrix[unbound], iV:index+int, i:index+int) -> num:
+def V(M:matrix+matrix[inout], iV:index+int, i:index+int) -> num:
     return atIJ(M, i, iV)
 
 @bones
-def H(M:matrix[unbound], iH:index+int, i:index+int) -> num:
+def H(M:matrix+matrix[inout], iH:index+int, i:index+int) -> num:
     return atIJ(M, iH, i)
-
-
-@bones(unbox=True)
-def _vnew(n:count) -> vector[unbound]:
-    next(_vnewCount)
-    answer = Vector([None] * n)
-    answer.n = n >> to(count)
-    return answer
 
 @bones(unbox=True)
 def idxRange(N:count) -> range:
@@ -131,17 +136,8 @@ def idxRange(N:count) -> range:
 def idxRange(i1: count, i2: count) -> range:
     return range(i1, i2 + 1)
 
-
 @bones
-def toVector(t:vector, x:BSum(list,tuple)) -> vector[unbound]:
-    n = len(x)
-    answer = _vnew(n)
-    for i in idxRange(n):
-        atIPut(answer, i, x[i-1])
-    return answer
-
-@bones
-def mmul(A:matrix[unbound], B:matrix[unbound]) -> matrix[unbound]:
+def mmul(A:matrix, B:matrix) -> matrix:
     assert A.c == B.r
     answer = _mnew(A.r, B.c)
     for iRow in idxRange(A.r):
@@ -153,14 +149,14 @@ def mmul(A:matrix[unbound], B:matrix[unbound]) -> matrix[unbound]:
     return answer
 
 @bones
-def mmulTrashA(A:matrix[inout], B:matrix, buf:vector[inout]) -> matrix[inout]:
+def mmul(A:matrix[inout], B:matrix, buf:vector[inout]) -> matrix[inout]:
     assert A.c == B.r
     nRows = A.r
     nCols = B.c
     nInner = A.c
     for iRow in idxRange(nRows):
         for iCol in idxRange(nCols):
-            sum = 0.0
+            sum = BNum(0.0)
             for i in idxRange(nInner):
                 sum += H(A, iRow, i) * V(B, iCol, i)
             atIPut(buf, iCol, sum)
@@ -169,14 +165,14 @@ def mmulTrashA(A:matrix[inout], B:matrix, buf:vector[inout]) -> matrix[inout]:
     return A
 
 @bones
-def mmulTrashB(A:matrix, B:matrix[inout], buf:vector[inout]) -> matrix[inout]:
+def mmul(A:matrix, B:matrix[inout], buf:vector[inout]) -> matrix[inout]:
     assert A.c == B.r
     nRows = A.r
     nCols = B.c
     nInner = A.c
     for iCol in idxRange(nCols):
         for iRow in idxRange(nRows):
-            sum = 0.0
+            sum = BNum(0.0)
             for i in idxRange(nInner):
                 sum += H(A, iRow, i) * V(B, iCol, i)
             atIPut(buf, iRow, sum)
@@ -185,73 +181,62 @@ def mmulTrashB(A:matrix, B:matrix[inout], buf:vector[inout]) -> matrix[inout]:
     return B
 
 @bones
-def mmul_AL_AL__AN(A:matrix[bound], B:matrix[bound]) -> matrix[unbound]:
-    return mmul(A, B)
-
-@bones
-def mmul_LHS_ANON(A : lhs, B : unbound, S : unbound) -> null:
+def T(A:matrix) -> matrix:
     pass
 
 @bones
-def mmulIP(A : lhs, B : bound, S : unbound) -> null:
-    pass
-
-@bones
-def mT(A:matrix) -> matrix:
-    pass
-
-@bones
-def mTDestroy(A:matrix) -> matrix[inout]:
+def T(A:matrix[inout]) -> matrix[inout]:
     pass
 
 
 def testNew():
-    A = ((1.0, 2.0), (3.0, 4.0)) >> to(matrix[unbound])
-    B = ((5.0, 6.0), (7.0, 8.0)) >> to(matrix[unbound])
+    A = ((1.0, 2.0), (3.0, 4.0)) >> to(matrix)
+    B = ((5.0, 6.0), (7.0, 8.0)) >> to(matrix)
     resetCounts()
     C = mmul(A, B)
     print("AB")
     printCounts()
 
-    D = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix[unbound])
-    E = ((11.0, 12.0, 13.0), (14.0, 15.0, 16.0), (17.0, 18.0, 19.0)) >> to(matrix[unbound])
+    D = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix)
+    E = ((11.0, 12.0, 13.0), (14.0, 15.0, 16.0), (17.0, 18.0, 19.0)) >> to(matrix)
     resetCounts()
     print("DE")
     F = mmul(D, E)
     printCounts()
 
-    G = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix[unbound])
-    H = ((11.0, 12.0, 13.0), (14.0, 15.0, 16.0), (17.0, 18.0, 19.0)) >> to(matrix[unbound])
-    buf = _vnew(G.c)
+    G = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix) >> to(matrix[inout])
+    H = ((11.0, 12.0, 13.0), (14.0, 15.0, 16.0), (17.0, 18.0, 19.0)) >> to(matrix)
+    buf = new(vector)(G.c) >> to(vector[inout])
     resetCounts()
     print("GH - destroy")
-    mmulTrashA(G, H, buf)
+    mmul(G, H, buf)
     printCounts()
-    assert F == G
+    assert F._v == G._v
 
-    G = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix[unbound])
-    H = ((11.0, 12.0, 13.0), (14.0, 15.0, 16.0), (17.0, 18.0, 19.0)) >> to(matrix[unbound])
-    buf = _vnew(G.c)
+    G = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix)
+    H = ((11.0, 12.0, 13.0), (14.0, 15.0, 16.0), (17.0, 18.0, 19.0)) >> to(matrix) >> to(matrix[inout])
+    buf = new(vector)(G.c) >> to(vector[inout])
     resetCounts()
     print("GH - destroy")
-    mmulTrashB(G, H, buf)
+    mmul(G, H, buf)
     printCounts()
-    assert F == H
+    assert F._v == H._v
+
 
 def testSquaring():
-    A = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix[unbound])
+    A = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix)
     resetCounts()
     print("AA")
-    X = mmulNew(A, A)
+    X = mmul(A, A)
     printCounts()
 
-    buf = _vnew(A.c)
-    B = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix[unbound])
+    buf = new(vector)(A.c) >> to(vector[inout])
+    B = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix)
     resetCounts()
     print("AA - trash")
-    Y = mmulTrashA(B, B, buf)
+    Y = mmul(B >> to(matrix[inout]), B, buf)
     printCounts()
-    assert X == Y
+    assert X._v == Y._v
 
 
 

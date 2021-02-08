@@ -64,7 +64,7 @@ class PolyFn(object):
         if self.numTypeArgs > 0:
             if len(args) != self.numTypeArgs:
                 # type args must specified (currently can't see a reason for allowing them to be partial)
-                raise TypeError(f'Must provide {self.numTypeArgs} type args')
+                raise TypeError(f'{self.fullModuleName} needs {self.numTypeArgs} type args - got {len(args)}')
             # just the type args are being provided - all flavours
             return _Partial(args, Missing, Missing, self, self.flavour)
         else:
