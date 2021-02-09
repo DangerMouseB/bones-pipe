@@ -13,11 +13,6 @@ from .._at_bones import bones
 from .to_for_tests import to
 
 
-unbound = BType('unbound')
-bound = BType('bound')
-null = BType('null')
-lhs = BType('lhs')
-lhsStar = BType('lhsStar')
 inout = BType('inout')
 
 matrix = BType('matrix')
@@ -25,7 +20,6 @@ vector = BType('vector')
 index = BType('index')
 num = BType('num')
 count = BType('count')
-N = BType('N')
 
 
 @bones(numTypeArgs=1)
@@ -86,7 +80,7 @@ class Matrix(list):
             row = []
             for j in range(self.c._v):
                 row += [self[j][i]]
-            rowStrings += [f'[{",".join([str(e) for e in row])}]']
+            rowStrings += [f'[{",".join([repr(e) for e in row])}]']
         return f'[{", ".join(rowStrings)}]'
 
 class Vector(list):
@@ -94,7 +88,7 @@ class Vector(list):
         super().__init__(*args, **kwargs)
         self.n = 0
     def __repr__(self):
-        return f'[{",".join([str(e) for e in self])}]'
+        return f'[{",".join([repr(e) for e in self])}]'
 
 
 # fortran ordered
@@ -129,8 +123,8 @@ def H(M:matrix+matrix[inout], iH:index+int, i:index+int) -> num:
     return atIJ(M, iH, i)
 
 @bones(unbox=True)
-def idxRange(N:count) -> range:
-    return range(1, N+1)
+def idxRange(n:count) -> range:
+    return range(1, n+1)
 
 @bones(unbox=True)
 def idxRange(i1: count, i2: count) -> range:
@@ -138,6 +132,7 @@ def idxRange(i1: count, i2: count) -> range:
 
 @bones
 def mmul(A:matrix, B:matrix) -> matrix:
+    # matrix multiplication
     assert A.c == B.r
     answer = _mnew(A.r, B.c)
     for iRow in idxRange(A.r):
@@ -150,6 +145,7 @@ def mmul(A:matrix, B:matrix) -> matrix:
 
 @bones
 def mmul(A:matrix[inout], B:matrix, buf:vector[inout]) -> matrix[inout]:
+    # matrix multiplication using a buffer so matrix A can be overwritten
     assert A.c == B.r
     nRows = A.r
     nCols = B.c
@@ -166,6 +162,7 @@ def mmul(A:matrix[inout], B:matrix, buf:vector[inout]) -> matrix[inout]:
 
 @bones
 def mmul(A:matrix, B:matrix[inout], buf:vector[inout]) -> matrix[inout]:
+    # matrix multiplication using a buffer so matrix B can be overwritten
     assert A.c == B.r
     nRows = A.r
     nCols = B.c
@@ -182,10 +179,12 @@ def mmul(A:matrix, B:matrix[inout], buf:vector[inout]) -> matrix[inout]:
 
 @bones
 def T(A:matrix) -> matrix:
+    # matrix transpose - answers a new matrix
     pass
 
 @bones
 def T(A:matrix[inout]) -> matrix[inout]:
+    # matrix transpose - inplace
     pass
 
 
