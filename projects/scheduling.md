@@ -8,6 +8,8 @@
 ## Next stage [MoSCoW]
 
 #### MustDo / TODO
+* add binary
+
 * dispatch should throw Dynamic/ partial TypeError e.g. int+null has been bound to (int) -> ... but at run time the Val is null
 * @bones throws an NonUniqueSignatureError subclass of TypeError - i.e. enforce signatures to not overlap
 * add registerRule so can do *(ccy(T1), fx(T1,T2))->ccy(T2) and +(ccy(T1),ccy(T1))->ccy(T1)
@@ -37,6 +39,7 @@ could a allow lives to be decremented and if run out can return
 <br>
 
 ## Completed
+* test cow and fow (fragment on write) for vector
 
 #### to Sun 2021.02.07
 * test_inplace

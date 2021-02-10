@@ -188,35 +188,36 @@ def T(A:matrix[inout]) -> matrix[inout]:
     pass
 
 
+buf = new(vector)(64 >> to(count)) >> to(vector[inout])   # 64 bytes - 2 cache lines, 8 floats, enough for our example
+
 def testNew():
     A = ((1.0, 2.0), (3.0, 4.0)) >> to(matrix)
     B = ((5.0, 6.0), (7.0, 8.0)) >> to(matrix)
     resetCounts()
     C = mmul(A, B)
-    print("AB")
+    print("A.B")
     printCounts()
 
     D = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix)
     E = ((11.0, 12.0, 13.0), (14.0, 15.0, 16.0), (17.0, 18.0, 19.0)) >> to(matrix)
     resetCounts()
-    print("DE")
+    print("D.E")
     F = mmul(D, E)
     printCounts()
 
     G = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix) >> to(matrix[inout])
     H = ((11.0, 12.0, 13.0), (14.0, 15.0, 16.0), (17.0, 18.0, 19.0)) >> to(matrix)
-    buf = new(vector)(G.c) >> to(vector[inout])
+
     resetCounts()
-    print("GH - destroy")
+    print("G.H - overwrite G")
     mmul(G, H, buf)
     printCounts()
     assert F._v == G._v
 
     G = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix)
     H = ((11.0, 12.0, 13.0), (14.0, 15.0, 16.0), (17.0, 18.0, 19.0)) >> to(matrix) >> to(matrix[inout])
-    buf = new(vector)(G.c) >> to(vector[inout])
     resetCounts()
-    print("GH - destroy")
+    print("G.H - overwrite H")
     mmul(G, H, buf)
     printCounts()
     assert F._v == H._v
@@ -225,14 +226,13 @@ def testNew():
 def testSquaring():
     A = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix)
     resetCounts()
-    print("AA")
+    print("A.A")
     X = mmul(A, A)
     printCounts()
 
-    buf = new(vector)(A.c) >> to(vector[inout])
     B = ((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)) >> to(matrix)
     resetCounts()
-    print("AA - trash")
+    print("A.A - overwrite A (just needs to use more buffer space)")
     Y = mmul(B >> to(matrix[inout]), B, buf)
     printCounts()
     assert X._v == Y._v
