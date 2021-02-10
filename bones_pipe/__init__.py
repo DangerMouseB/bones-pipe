@@ -5,5 +5,5 @@
 # *******************************************************************************
 
 import coppertop
-#from ._at_bones import bones
+from ._at_bones import bones
 

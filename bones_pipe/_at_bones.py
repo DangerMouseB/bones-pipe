@@ -45,6 +45,7 @@ class PolyFn(object):
         sig = tuple(args[:self.numTypeArgs]+tuple(_typeOfArg(arg) for arg in args[self.numTypeArgs:]))
         details = _selectTarget(sig, self.detailsBySig)
         if details is Missing:
+            details = _selectTarget(sig, self.detailsBySig)
             raise TypeError(f"{self.fullModuleName} - no matches for {repr(sig)}")
         ret, function, unbox = details
         if unbox:
@@ -119,7 +120,7 @@ def _selectTarget(sig, detailsBySig):
                         break
                 else:
                     # here we implement that a single python type is a list of one type
-                    if st == ot:
+                    if st != ot:
                         found = False
                         break
             if found:
