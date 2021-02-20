@@ -11,14 +11,18 @@ from coppertop import Missing
 from bones_data import BType, SV, BSum, BCount, BIndex, BOffset, BNum
 from .._at_bones import bones
 
+# why add the cow type? all because the lady loves milk tray...
+# but really we just want more control than strings
 
+cow = BType('cow')         # copy on write, or equally fragment on write
+anon = cow['anon']         # unbound data structure - we are free to modify it inplace without consequence
+named = cow['named']       # named data structure - can be converted to an anonymous struct just before
+                                # last access before a rebind, e.g. A = B * A * A' * C can be anonned after the '
+                                # and just before the * of A * A' and that * C can overwrite too
+aliased = cow['aliased']   # was tempted to call this static or immutable but the only case when we need that is
+                              # when the memory is aliased by another name, we could keep a ref count but instead
+                                # let's simplify by saying the type is now aliased, e.g. B = A
 
-anon = BType('anon')             # unbound data structure - we are free to modify it inplace without consequence
-named = BType('named')          # named data structure - can be converted to an anonymous struct just before
-                                    # last access before a rebind, e.g. A = B * A * A' * C can be anonned after the '
-                                    # and just before the * of A * A' and that * C can overwrite too
-aliased = BType('aliased')       # we could keep a ref count but instead let's simplify by saying the type is now
-                                    # aliased, e.g. B = A
 
 vector = BType('vector')
 fragmentedvector = BType('fragmentedvector')
@@ -48,11 +52,13 @@ def to(t:fragmentedvector[anon], fragments:tuple) -> fragmentedvector[anon]:
 
 @bones
 def atput(v:vector[anon], i:offset+int, x:int) -> vector[anon]:
+    # can be done in place as v is anon
     v._v[i] = x
     return v
 
 @bones
 def atput(v:vector[named]+vector[aliased], i:offset+int, x:int) -> vector[anon]:
+    # less memory efficient but faster
     newv = list(v._v)
     newv[i] = x
     return newv >> to(vector[anon])
@@ -63,6 +69,7 @@ def at(v:vector[anon]+vector[named]+vector[aliased], i:offset+int) -> int:
 
 @bones
 def fragmentedatput(v:vector[named]+vector[aliased], i:offset+int, x:int) -> fragmentedvector[anon]:
+    # more memory efficient but slower as less cache, at and equals friendly
     old = v._v
     fragments = (old[:i], [x], old[i+1:])
     return fragments >> to(fragmentedvector[anon])

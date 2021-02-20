@@ -23,25 +23,22 @@ USD = ccy['USD']
 
 GBP_USD = fx(domestic=GBP, foreign=USD)
 
-@bones(numTypeArgs=2)
+@bones(numTypeArgs=2, unbox=True)
 def to(d:ccy[D], f:ccy[F], rate:num) -> fx(domestic=ccy[D], foregin=ccy[F]):
-    assert f == fx._s.f
-    assert d._s == fx._s.d
-    return d * fx >> to(f)
+    return rate
 
 @bones(flavour=binary)
 def mul(d:ccy[D], fx:fx(domestic=ccy[D], foreign=ccy[F])) -> ccy[F]:
     assert d._s == fx._s.domestic
     return d * fx >> to(fx._s.foreign)
 
-cable = 1.3 >> to(fx(domestic=GBP, foreign=USD))
-100 >> to(GBP) >> mul >> cable >> cout
 
 
 def testFx():
     mySavings = 100 >> to(GBP)
     fxRate = 1.3 >> to(GBP_USD)
-    mySavingsInUsd = mySavings * fxRate
+    mySavingsInUsd = mySavings >> mul >> fxRate     # could map * to call mul but then ccy or fx would
+                                                            # need implmenting as a float subclass
     assert mySavingsInUsd._s == USD
     assert mySavingsInUsd._v == 130
 
